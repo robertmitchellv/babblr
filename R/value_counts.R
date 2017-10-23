@@ -1,22 +1,45 @@
 #' A Quick Group-by, Summarise, Mutate function inspired by Pandas
 #'
 #' This function allows you to select one or more variables from a data frame
-#' and have a group_by(), summarise with n(), and mutate() a percent variable.
+#' to perform (1st) a group_by() operation, (2nd) a summarise() count operation
+#' with n(), and (3rd) then mutate() operation to create a percent variable.
 #' Since it uses dplyr, it returns a data frame, which is easier to plot with.
 #' @param
 #' @keywords
 #' @export
 #' @example
 #' value_counts()
-value_counts <- function(df, ...) {
-  value_counts_(df, .dots = lazyeval::lazy_dots(...))
+value_counts <- function(data, ..., round = FALSE) {
+  group_by <- quos(...)
+
+  out <- data %>%
+    group_by(!!! group_by) %>%
+    summarise(n = n())
+
+  if (round == TRUE) {
+    out <- out %>%
+      mutate(percent = round_percent(n))
+  } else {
+    out <- out %>%
+      mutate(percent = round(
+        (n / sum(n)) * 100,
+        2
+      ))
+  }
+
+  out %>%
+    arrange(desc(n))
 }
 
-value_counts_ <- function(df, ..., .dots) {
-  dots <- lazyeval::all_dots(.dots, ..., all_named = TRUE)
-  df <- dplyr::group_by_(df, .dots = dots)
-  df <- dplyr::summarise(df, n = n())
-  df <- dplyr::mutate(df, percent = round(n / sum(n) * 100, 2))
-  df <- dplyr::arrange(df, desc(n))
-  return(df)
+# round percentage so it adds to 100
+round_percent <- function(x) {
+  x <- x / sum(x) * 100     # Standardize result
+  res <- floor(x)           # Find integer bits
+  rsum <- sum(res)          # Find out how much we are missing
+  if(rsum < 100) {
+    # Distribute points based on remainders and a random tie breaker
+    o <- order(x %% 1, sample(length(x)), decreasing = TRUE)
+    res[o[1:(100 - rsum)]] <- res[o[1:(100 - rsum)]] + 1
+  }
+  res
 }
