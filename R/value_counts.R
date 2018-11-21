@@ -9,7 +9,7 @@
 #' @export
 #' @example
 #' value_counts()
-value_counts <- function(data, ..., round = FALSE) {
+value_counts <- function(data, ..., round = FALSE, arrange = FALSE) {
   group_by <- quos(...)
 
   out <- data %>%
@@ -26,9 +26,15 @@ value_counts <- function(data, ..., round = FALSE) {
         2
       ))
   }
+  
+  ungroup(out)
 
-  out %>%
-    arrange(desc(n))
+  if (arrange == TRUE) {
+    out %>%
+      arrange(desc(n))
+  } else {
+    return(out)
+  }
 }
 
 # round percentage so it adds to 100
